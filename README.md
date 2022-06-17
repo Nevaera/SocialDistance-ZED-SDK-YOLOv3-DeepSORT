@@ -92,8 +92,11 @@ After executing one of the above lines, you should see proper .tf files in your 
 You can run the object tracker for whichever model you have created, pretrained, tiny, or custom.
 ```
 
-#yolov3 on Stereolabs ZED 
+#yolov3 on Stereolabs ZED using the median depth and the default 2.0m social distance
 python social_distance.py
+
+#yolov3 on Stereolabs ZED with the centerpoint depth and a social distance of 1.5m
+python social_distance.py --depth centerpoint --distance 1.5
 
 #yolov3-tiny 
 python social_distance.py --weights ./weights/yolov3-tiny.tf --tiny
@@ -120,7 +123,12 @@ social_distance.py:
   --classes: path to classes file
     (default: './data/labels/coco.names')
   --[no]tiny: yolov3 or yolov3-tiny
-    (default: 'false')
+    (default: 'false' - yolov3)
+  --depth: centerpoint or median
+    (default: 'false' - median)
+  --distance: distance in metres/m for social distancing
+    (default: '2.0')
+    (a float)
   --weights: path to weights file
     (default: './weights/yolov3.tf')
   --num_classes: number of classes in the model

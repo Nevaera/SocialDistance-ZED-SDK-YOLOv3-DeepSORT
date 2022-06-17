@@ -21,6 +21,7 @@ from absl.flags import FLAGS
 import cv2
 import math
 import matplotlib.pyplot as plt
+import statistics
 import tensorflow as tf
 from yolov3_tf2.models import (
     YoloV3, YoloV3Tiny
@@ -49,12 +50,14 @@ flags.DEFINE_string('classes', './data/labels/coco.names', 'path to classes file
 flags.DEFINE_string('weights', './weights/yolov3.tf',
                     'path to weights file')
 flags.DEFINE_boolean('tiny', False, 'yolov3 or yolov3-tiny')
+flags.DEFINE_boolean('depth', False, 'centerpoint or median')
 flags.DEFINE_integer('size', 416, 'resize images to')
-flags.DEFINE_string('video', './data/video/test.mp4',
-                    'path to video file or number for webcam)')
-flags.DEFINE_string('output', None, 'path to output video')
-flags.DEFINE_string('output_format', 'XVID', 'codec used in VideoWriter when saving video to file')
+#flags.DEFINE_string('video', './data/video/test.mp4',
+#                    'path to video file or number for webcam)')
+#flags.DEFINE_string('output', None, 'path to output video')
+#flags.DEFINE_string('output_format', 'XVID', 'codec used in VideoWriter when saving video to file')
 flags.DEFINE_integer('num_classes', 80, 'number of classes in the model')
+flags.DEFINE_float('distance', 2.0, 'the social distance [in metres /m]')
 
 #Stereolabs ZED-related global variables
 lock = Lock()   
@@ -103,9 +106,9 @@ def zed_capture_thread_func():
             depth_np_global = load_depth_into_numpy_array(depth_mat)
             new_data = True
             lock.release()
-    print(">>> ZED Shutdown...")
+    print("<<< ZED Shutdown...")
     zed.close()
-    print(">>> ZED Shutdown... Done!")
+    print("<<< ZED Shutdown... Done!")
 
 
 def main(_argv):
@@ -131,19 +134,26 @@ def main(_argv):
     else:
         yolo = YoloV3(classes=FLAGS.num_classes)
 
+    print(" >>> Load Weights...")
     yolo.load_weights(FLAGS.weights)
-    logging.info('weights loaded')
-
+    #logging.info('weights loaded')
+    print(" >>> Load Weights... Done!")
+    print(" >>> Load Classes...")
     class_names = [c.strip() for c in open(FLAGS.classes).readlines()]
-    logging.info('classes loaded')
-    
+    #logging.info('classes loaded')
+    print(" >>> Load Classes... Done!")
     fps = 0.0
-
+    social_distance = FLAGS.distance
     '''    
-        # Begin Main Loop
+        # Main Loop
     '''
+    print("     >>> Program Start... [Press 'Q/q' to quit]")
     while True:
         t1 = time.time()
+        # Colors in BGR format
+        color_white = (255, 255, 255)
+        color_red = (0, 0, 255)    
+        color_green = (0, 255, 0) 
         if new_data:
             # Get images from ZED capture thread
             lock.acquire()
@@ -198,6 +208,7 @@ def main(_argv):
                     continue 
                 bbox = track.to_tlbr()
                 class_name = track.get_class()
+
                 # Get only people
                 if not str(class_name) == "person":
                     continue
@@ -213,40 +224,74 @@ def main(_argv):
                     #if ymax > height: ymax = height-1
                     #if xmax > width: xmax = width-1
 
+                    # Centerpoint depth
                     xc = get_center(xmin, xmax) #int((xmax + xmin) * 0.5)
                     yc = get_center(ymin, ymax) #int((ymax + ymin) * 0.5)
+                   
+                    if FLAGS.depth:
+                        # Get depth of center-point from cloud
+                        x = depth_np[yc, xc, 0]
+                        y = depth_np[yc, xc, 1]
+                        z = depth_np[yc, xc, 2]
 
-                    # Get depth of center-point from cloud
-                    x = depth_np[yc, xc, 0]
-                    y = depth_np[yc, xc, 1]
-                    z = depth_np[yc, xc, 2]
-
-                    if not np.isnan(z) and not np.isinf(z):
-                        cv2.circle(image_np, (xc, yc), 5, (0, 255, 0), thickness=cv2.FILLED) # Green Dot
-                        distance = math.sqrt(x * x + y * y + z * z) # Compute distance from camera 
-                        people.append(Person(xc, yc, x, y, z, bbox, track.track_id, distance))
+                        if not np.isnan(z) and not np.isinf(z):
+                            cv2.circle(image_np, (xc, yc), 5, (0, 255, 0), thickness=cv2.FILLED) # Green Dot
+                            cv2.circle(depth_np, (xc, yc), 5, (0, 255, 0), thickness=cv2.FILLED) # Green Dot
+                            distance = math.sqrt(x * x + y * y + z * z) # Compute distance from camera 
+                            people.append(Person(xc, yc, x, y, z, bbox, track.track_id, distance))
+                        else:
+                            cv2.circle(image_np, (xc, yc), 5, (0, 0, 255), thickness=cv2.FILLED) # Red Dot
+                            cv2.circle(depth_np, (xc, yc), 5, (0, 0, 255), thickness=cv2.FILLED) # Red Dot
+                            continue
                     else:
-                        cv2.circle(image_np, (xc, yc), 5, (0, 0, 255), thickness=cv2.FILLED) # Red Dot
-                        continue
-
-            color_white = (255, 255, 255)
-            color_red = (0, 0, 255)         
+                        # Median depth
+                        x_vect = []
+                        y_vect = []
+                        z_vect = []
+                        for j_ in range(ymin, ymax):
+                            if np.mod(j_, 25) == 0:
+                                for i_ in range(xmin, xmax):
+                                    if np.mod(i_, 10) == 0:
+                                        try:
+                                            z = depth_np[j_, i_, 2]
+                                            if not np.isnan(z) and not np.isinf(z):
+                                                x_vect.append(depth_np[j_, i_, 0])
+                                                y_vect.append(depth_np[j_, i_, 1])
+                                                z_vect.append(z)
+                                                cv2.circle(depth_np, (i_, j_), 2, color_green, thickness=cv2.FILLED) # Green Dot
+                                            else:
+                                                cv2.circle(depth_np, (i_, j_), 2, color_red, thickness=cv2.FILLED) # Red Dot
+                                        except IndexError:
+                                            continue
+                        distance = -1.0
+                        if len(x_vect) > 0:
+                            x = statistics.median(x_vect)
+                            y = statistics.median(y_vect)
+                            z = statistics.median(z_vect)
+                            distance = math.sqrt(x * x + y * y + z * z) # Compute distance from camera 
+                            people.append(Person(xc, yc, x, y, z, bbox, track.track_id, distance))                                        
+                
             for person in people:
-                # Draw Boundingboxes
+                # Draw Bounding Boxes
                 color = colors[int(person.dsid) % len(colors)]
                 color = [i * 255 for i in color]
                 cv2.rectangle(image_np, (int(person.bbox[0]), int(person.bbox[1])), (int(person.bbox[2]), int(person.bbox[3])), color, 2)
+                cv2.rectangle(depth_np, (int(person.bbox[0]), int(person.bbox[1])), (int(person.bbox[2]), int(person.bbox[3])), color, 2)
                 cv2.rectangle(image_np, (int(person.bbox[0]), int(person.bbox[1]-30)), (int(person.bbox[0])+(len(class_name)+len(str(person.dsid)))*17, int(person.bbox[1])), color, -1)
                 cv2.putText(image_np, "person " + str(person.dsid),(int(person.bbox[0]), int(person.bbox[1]-10)),0, 0.75, color_white,2)
                 # Display distance to other people
                 for person2 in people:
                     if not person.dsid == person2.dsid:
+                        #Check if the two people are socially distanced
                         d = round(compute_relative_distance(person, person2), 2)
+                        if d >= social_distance:
+                            color = color_green
+                        else:
+                            color = color_red                        
                         cv2.line(image_np, (person.cx, person.cy), (person2.cx, person2.cy), color_white, 2)
-                        #cv2.rectangle(image_np, (cx, cy-20), (cx+60, cy+10), (0, 0, 0), thickness=cv2.FILLED)
                         cx = get_center(person.cx, person2.cx)
-                        cy = get_center(person.cy, person2.cy)
-                        cv2.putText(image_np, str(round(d, 2)) + "m", (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_red, 2)
+                        cy = get_center(person.cy, person2.cy)                        
+                        cv2.putText(image_np, str(round(d, 2)) + "m", (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
             
             # print fps on screen 
@@ -260,7 +305,7 @@ def main(_argv):
                 
         # press q to quit
         if cv2.waitKey(1) == ord('q'):
-            print("<<< Exiting...")
+            print("     <<< Exiting...")
             lock.acquire()
             exit_signal = True
             lock.release()

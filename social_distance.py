@@ -272,6 +272,10 @@ def main(_argv):
                     if not person.dsid == person2.dsid:
                         d = round(compute_relative_distance(person, person2), 2)
                         cv2.line(image_np, (person.cx, person.cy), (person2.cx, person2.cy), (255, 255, 255), 2)
+                        #cv2.rectangle(image_np, (cx, cy-20), (cx+60, cy+10), (0, 0, 0), thickness=cv2.FILLED)
+                        cx = get_x_center(person.cx, person2.cx)
+                        cy = get_y_center(person.cy, person2.cy)
+                        cv2.putText(image_np, str(round(d, 2)) + "m", (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
             
             # print fps on screen 

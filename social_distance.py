@@ -44,6 +44,7 @@ from library import load_depth_into_numpy_array
 from library import get_x_center
 from library import get_y_center
 from library import compute_relative_distance
+from library import Person
 
 flags.DEFINE_string('classes', './data/labels/coco.names', 'path to classes file')
 flags.DEFINE_string('weights', './weights/yolov3.tf',
@@ -219,7 +220,7 @@ def main(_argv):
                 bbox = det.to_tlbr() 
                 cv2.rectangle(image_np,(int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])),(255,0,0), 2)
 
-            people_locations = [] # List of locations of all tracked people in the frame
+            people = [] # List of locations of all tracked people in the frame
 
             for track in tracker.tracks:
                 if not track.is_confirmed() or track.time_since_update > 1:
@@ -246,28 +247,32 @@ def main(_argv):
                     cv2.circle(image_np, (xmax, ymax), 5, (255, 255, 255), thickness=cv2.FILLED)
 
                     # Get depth of center-point from cloud
+                    x = depth_np[yc, xc, 0]
+                    y = depth_np[yc, xc, 1]
                     z = depth_np[yc, xc, 2]
-
-                    location = []
 
                     if not np.isnan(z) and not np.isinf(z):
                         cv2.circle(image_np, (xc, yc), 5, (0, 255, 0), thickness=cv2.FILLED) # Green Dot
-                        #x_vect.append(depth_np[yc, xc, 0])
-                        #y_vect.append(depth_np[yc, xc, 1])
-                        #z_vect.append(z)
-                        location = [yc, xc, z]
+                        distance = math.sqrt(x * x + y * y + z * z) # Compute distance from camera 
+                        people.append(Person(xc, yc, x, y, z, track.track_id, distance))
                     else:
                         cv2.circle(image_np, (xc, yc), 5, (0, 0, 255), thickness=cv2.FILLED) # Red Dot
+                        continue
 
-                    if location:
-                        distance = math.sqrt(location[1] * location[1] + location[0] * location[0] + location[2] * location[2]) # Compute distance from camera
+            color = (255, 255, 255)                
+            for person in people:
+                # Draw Boundingboxes
+                color = colors[int(person.dsid) % len(colors)]
+                color = [i * 255 for i in color]
+                cv2.rectangle(image_np, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), color, 2)
+                cv2.rectangle(image_np, (int(bbox[0]), int(bbox[1]-30)), (int(bbox[0])+(len(class_name)+len(str(person.dsid)))*17, int(bbox[1])), color, -1)
+                cv2.putText(image_np, str(person.dsid),(int(bbox[0]), int(bbox[1]-10)),0, 0.75, (255,255,255),2)
+                # Display distance to other people
+                for person2 in people:
+                    if not person.dsid == person2.dsid:
+                        d = round(compute_relative_distance(person, person2), 2)
+                        cv2.line(image_np, (person.cx, person.cy), (person2.cx, person2.cy), (255, 255, 255), 2)
 
-                    
-                    color = colors[int(track.track_id) % len(colors)]
-                    color = [i * 255 for i in color]
-                    cv2.rectangle(image_np, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), color, 2)
-                    cv2.rectangle(image_np, (int(bbox[0]), int(bbox[1]-30)), (int(bbox[0])+(len(class_name)+len(str(track.track_id)))*17, int(bbox[1])), color, -1)
-                    cv2.putText(image_np, class_name + "-" + str(track.track_id),(int(bbox[0]), int(bbox[1]-10)),0, 0.75, (255,255,255),2)
             
             # print fps on screen 
             fps  = ( fps + (1./(time.time()-t1)) ) / 2

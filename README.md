@@ -1,9 +1,28 @@
-# Object Tracking using YOLOv3, Deep Sort and Tensorflow
-This repository implements YOLOv3 and Deep SORT in order to perfrom real-time object tracking. Yolov3 is an algorithm that uses deep convolutional neural networks to perform object detection. We can feed these object detections into Deep SORT (Simple Online and Realtime Tracking with a Deep Association Metric) in order for a real-time object tracker to be created.
+# ZED Social Distance, a Project to Compute the Distance Between People
 
-![Demo of Object Tracker](data/helpers/demo.gif)
+This project integrates the ZED SDK and Stereolabs ZED camera to compute the real-world distance between people. The ZED produces a depth map that can be used to extract the cartesian coordinates of each pixel in 3D space relative to the camera image. Using the depth map, distances between pixels in the image can be computed that equate to a real-world distance. The acknowledged projects were integrated to provide human detection and tracking. Once a person is detected and tracked, its distance from other people is computed and displayed.
 
-## Getting started
+![Stereolabs ZED](data/helpers/demo.png)
+
+'''
+This project was forked from: https://github.com/theAIGuysCode/yolov3_deepsort
+and uses technology from:
+ - https://github.com/zzh8829/yolov3-tf2
+ - https://github.com/nwojke/deep_sort
+ - https://arxiv.org/abs/1804.02767
+'''
+
+## Required Hardware
+This project requires the use of the Sterolabs ZED Stereovision camera system and the ZED SDK for Python (Py-ZED)
+![Stereolabs ZED](data/helpers/zed.jpg)
+You will need to install the ZED SDk
+ - Getting started guide here: https://www.stereolabs.com/developers/
+ - Py-ZED install docs here: https://www.stereolabs.com/docs/app-development/python/install/
+ - You will also need to install the SDK's dependencies (inc. Nvidia CUDA)
+
+
+## Getting Started 
+These requirements have been lifted from the original repo to be able to run YOLOv3, DeepSORT, and Tensorflow using the COCO dataset. (Some tweaking may be required to get them to work with the ZED SDK and CUDA on your system... use of Conda advised.)
 
 #### Conda (Recommended)
 
@@ -69,29 +88,19 @@ python load_weights.py --weights ./weights/<YOUR CUSTOM WEIGHTS FILE> --output .
 After executing one of the above lines, you should see proper .tf files in your weights folder. You are now ready to run object tracker.
 
 ## Running the Object Tracker
-Now you can run the object tracker for whichever model you have created, pretrained, tiny, or custom.
+You can run the object tracker for whichever model you have created, pretrained, tiny, or custom.
 ```
-# yolov3 on video
-python object_tracker.py --video ./data/video/test.mp4 --output ./data/video/results.avi
 
-#yolov3 on webcam 
-python object_tracker.py --video 0 --output ./data/video/results.avi
+#yolov3 on Stereolabs ZED 
+python social_distance.py
 
 #yolov3-tiny 
-python object_tracker.py --video ./data/video/test.mp4 --output ./data/video/results.avi --weights ./weights/yolov3-tiny.tf --tiny
+python social_distance.py --weights ./weights/yolov3-tiny.tf --tiny
 
 #yolov3-custom (add --tiny flag if your custom weights were trained for tiny model)
-python object_tracker.py --video ./data/video/test.mp4 --output ./data/video/results.avi --weights ./weights/yolov3-custom.tf --num_classes <# CLASSES> --classes ./data/labels/<YOUR CUSTOM .names FILE>
+python social_distance.py  --weights ./weights/yolov3-custom.tf --num_classes <# CLASSES> --classes ./data/labels/<YOUR CUSTOM .names FILE>
 ```
-The output flag saves your object tracker results as an avi file for you to watch back. It is not necessary to have the flag if you don't want to save the resulting video.
-
-There is a test video uploaded in the data/video folder called test.mp4. If you followed all the steps properly with the pretrained coco yolov3.weights model then when your run the object tracker wiht the first command above you should see the following.
-#### Video Example
-![Demo of Object Tracker](data/helpers/demo.gif)
-
-#### Webcam Example
-This is a demo of running the object tracker using the above command for running the object tracker on your webcam.
-![Webcam Demo](data/helpers/webcam_demo.gif)
+Video input/output is not currently supported.
 
 ## Command Line Args Reference
 ```
@@ -106,15 +115,9 @@ load_weights.py:
     (default: '80')
     (an integer)
     
-object_tracker.py:
+social_distance.py:
   --classes: path to classes file
     (default: './data/labels/coco.names')
-  --video: path to input video (use 0 for webcam)
-    (default: './data/video/test.mp4')
-  --output: path to output video (remember to set right codec for given format. e.g. XVID for .avi)
-    (default: None)
-  --output_format: codec used in VideoWriter when saving video to file
-    (default: 'XVID)
   --[no]tiny: yolov3 or yolov3-tiny
     (default: 'false')
   --weights: path to weights file
@@ -133,7 +136,3 @@ object_tracker.py:
     (a float)
 ```
 
-## Acknowledgments
-* [Yolov3 TensorFlow Amazing Implementation](https://github.com/zzh8829/yolov3-tf2)
-* [Deep SORT Repository](https://github.com/nwojke/deep_sort)
-* [Yolo v3 official paper](https://arxiv.org/abs/1804.02767)

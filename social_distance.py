@@ -9,7 +9,7 @@
 '''
 #Imports added to support the addition of the ZED
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # Uncomment to suppress TensorFlow's Excessive debug messages
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # Comment out to unsuppress TensorFlow's Excessive debug messages
 #from os import system, name
 from threading import Lock, Thread
 from time import sleep
@@ -41,8 +41,7 @@ import pyzed.sl as sl
 # Function Imports
 from library import load_image_into_numpy_array
 from library import load_depth_into_numpy_array
-from library import get_x_center
-from library import get_y_center
+from library import get_center
 from library import compute_relative_distance
 from library import Person
 
@@ -137,23 +136,6 @@ def main(_argv):
 
     class_names = [c.strip() for c in open(FLAGS.classes).readlines()]
     logging.info('classes loaded')
-
-    #try:
-    #    vid = cv2.VideoCapture(int(FLAGS.video))
-    #except:
-    #    vid = cv2.VideoCapture(FLAGS.video)
-
-    #out = None
-
-    #if FLAGS.output:
-    #    # by default VideoCapture returns float instead of int
-    #    width = int(vid.get(cv2.CAP_PROP_FRAME_WIDTH))
-    #    height = int(vid.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    #    fps = int(vid.get(cv2.CAP_PROP_FPS))
-    #    codec = cv2.VideoWriter_fourcc(*FLAGS.output_format)
-    #    out = cv2.VideoWriter(FLAGS.output, codec, fps, (width, height))
-    #    list_file = open('detection.txt', 'w')
-    #    frame_index = -1 
     
     fps = 0.0
 
@@ -161,21 +143,6 @@ def main(_argv):
         # Begin Main Loop
     '''
     while True:
-        #_, img = vid.read()
-
-        #if img is None:
-        #    logging.warning("Empty Frame")
-        #    time.sleep(0.1)
-        #    count+=1
-        #    if count < 3:
-        #        continue
-        #    else: 
-        #        break
-
-        #img_in = cv2.cvtColor(img, cv2.COLOR_BGR2RGB) 
-        #img_in = tf.expand_dims(img_in, 0)
-        #img_in = transform_images(img_in, FLAGS.size)
-
         t1 = time.time()
         if new_data:
             # Get images from ZED capture thread
@@ -193,7 +160,9 @@ def main(_argv):
             boxes, scores, classes, nums = yolo.predict(image)
             classes = classes[0]
             names = []
+            #print("len classes " + str(len(classes)))
             for i in range(len(classes)):
+                #print("int classes " + str(int(classes[i])))
                 names.append(class_names[int(classes[i])])
             names = np.array(names)
             converted_boxes = convert_boxes(image_np, boxes[0])
@@ -216,9 +185,11 @@ def main(_argv):
             tracker.update(detections)
 
             ### UNCOMMENT BELOW IF YOU WANT CONSTANTLY CHANGING YOLO DETECTIONS TO BE SHOWN ON SCREEN
-            for det in detections:
-                bbox = det.to_tlbr() 
-                cv2.rectangle(image_np,(int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])),(255,0,0), 2)
+            #for det in detections:
+            #    bbox = det.to_tlbr() 
+            #    name = det.get_class()
+            #    cv2.rectangle(image_np,(int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])),(255,0,0), 2)
+            #    cv2.putText(image_np, name, (int(bbox[0]), int(bbox[1]-10)), 0, 0.75, (255,255,255),2)
 
             people = [] # List of locations of all tracked people in the frame
 
@@ -236,15 +207,14 @@ def main(_argv):
                     xmax = int(bbox[2])
                     ymax = int(bbox[3])
                     
-                    if ymin < 0: ymin = 0
-                    if xmin < 0: xmin = 0
-                    if ymax > height: ymax = height-1
-                    if xmax > width: xmax = width-1
+                    # Clamp to Image frame (if boundingbox falls outside of frame)
+                    #if ymin < 0: ymin = 0
+                    #if xmin < 0: xmin = 0
+                    #if ymax > height: ymax = height-1
+                    #if xmax > width: xmax = width-1
 
-                    xc = get_x_center(xmin, xmax) #int((xmax + xmin) * 0.5)
-                    yc = get_y_center(ymin, ymax) #int((ymax + ymin) * 0.5) 
-                    cv2.circle(image_np, (xmin, ymin), 5, (255, 255, 255), thickness=cv2.FILLED)
-                    cv2.circle(image_np, (xmax, ymax), 5, (255, 255, 255), thickness=cv2.FILLED)
+                    xc = get_center(xmin, xmax) #int((xmax + xmin) * 0.5)
+                    yc = get_center(ymin, ymax) #int((ymax + ymin) * 0.5)
 
                     # Get depth of center-point from cloud
                     x = depth_np[yc, xc, 0]
@@ -254,48 +224,40 @@ def main(_argv):
                     if not np.isnan(z) and not np.isinf(z):
                         cv2.circle(image_np, (xc, yc), 5, (0, 255, 0), thickness=cv2.FILLED) # Green Dot
                         distance = math.sqrt(x * x + y * y + z * z) # Compute distance from camera 
-                        people.append(Person(xc, yc, x, y, z, track.track_id, distance))
+                        people.append(Person(xc, yc, x, y, z, bbox, track.track_id, distance))
                     else:
                         cv2.circle(image_np, (xc, yc), 5, (0, 0, 255), thickness=cv2.FILLED) # Red Dot
                         continue
 
-            color = (255, 255, 255)                
+            color_white = (255, 255, 255)
+            color_red = (0, 0, 255)         
             for person in people:
                 # Draw Boundingboxes
                 color = colors[int(person.dsid) % len(colors)]
                 color = [i * 255 for i in color]
-                cv2.rectangle(image_np, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), color, 2)
-                cv2.rectangle(image_np, (int(bbox[0]), int(bbox[1]-30)), (int(bbox[0])+(len(class_name)+len(str(person.dsid)))*17, int(bbox[1])), color, -1)
-                cv2.putText(image_np, str(person.dsid),(int(bbox[0]), int(bbox[1]-10)),0, 0.75, (255,255,255),2)
+                cv2.rectangle(image_np, (int(person.bbox[0]), int(person.bbox[1])), (int(person.bbox[2]), int(person.bbox[3])), color, 2)
+                cv2.rectangle(image_np, (int(person.bbox[0]), int(person.bbox[1]-30)), (int(person.bbox[0])+(len(class_name)+len(str(person.dsid)))*17, int(person.bbox[1])), color, -1)
+                cv2.putText(image_np, "person " + str(person.dsid),(int(person.bbox[0]), int(person.bbox[1]-10)),0, 0.75, color_white,2)
                 # Display distance to other people
                 for person2 in people:
                     if not person.dsid == person2.dsid:
                         d = round(compute_relative_distance(person, person2), 2)
-                        cv2.line(image_np, (person.cx, person.cy), (person2.cx, person2.cy), (255, 255, 255), 2)
+                        cv2.line(image_np, (person.cx, person.cy), (person2.cx, person2.cy), color_white, 2)
                         #cv2.rectangle(image_np, (cx, cy-20), (cx+60, cy+10), (0, 0, 0), thickness=cv2.FILLED)
-                        cx = get_x_center(person.cx, person2.cx)
-                        cy = get_y_center(person.cy, person2.cy)
-                        cv2.putText(image_np, str(round(d, 2)) + "m", (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+                        cx = get_center(person.cx, person2.cx)
+                        cy = get_center(person.cy, person2.cy)
+                        cv2.putText(image_np, str(round(d, 2)) + "m", (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color_red, 2)
 
             
             # print fps on screen 
             fps  = ( fps + (1./(time.time()-t1)) ) / 2
             cv2.putText(image_np, "FPS: {:.2f}".format(fps), (0, 30),
-                            cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 0, 255), 2)
+            cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, color_red, 2)
             
             # show output
             cv2.imshow('Left Image', image_np)
             cv2.imshow('Depth Image', depth_np)
                 
-            #if FLAGS.output:
-            #    out.write(image_np)
-            #    frame_index = frame_index + 1
-            #    list_file.write(str(frame_index)+' ')
-            #    if len(converted_boxes) != 0:
-            #        for i in range(0,len(converted_boxes)):
-            #            list_file.write(str(converted_boxes[i][0]) + ' '+str(converted_boxes[i][1]) + ' '+str(converted_boxes[i][2]) + ' '+str(converted_boxes[i][3]) + ' ')
-            #    list_file.write('\n')
-
         # press q to quit
         if cv2.waitKey(1) == ord('q'):
             print("<<< Exiting...")
@@ -303,12 +265,8 @@ def main(_argv):
             exit_signal = True
             lock.release()
             break
-    #vid.release()
-    #if FLAGS.output:
-    #    out.release()
-    #    list_file.close()
+    
     cv2.destroyAllWindows()
-
 
 if __name__ == '__main__':
     try:

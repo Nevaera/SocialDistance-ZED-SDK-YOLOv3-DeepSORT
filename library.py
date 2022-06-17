@@ -10,14 +10,16 @@ class Person:
     x = -1.0
     y = -1.0
     z = -1.0
+    bbox = None
     dsid = -1
     d = -1
-    def __init__(self, cx, cy, x, y, z, dsid, d):
+    def __init__(self, cx, cy, x, y, z, bbox, dsid, d):
         self.cx = cx
         self.cy = cy
         self.x = x
         self.y = y
         self.z = z
+        self.bbox = bbox
         self.dsid = dsid
         self.d = d
 
@@ -39,11 +41,8 @@ def load_depth_into_numpy_array(depth):
     (im_height, im_width, channels) = depth.get_data().shape
     return np.array(ar).reshape((im_height, im_width, channels)).astype(np.float32)
 
-def get_x_center(x1, x2):
-    return int((x2 + x1)/2)
-
-def get_y_center(y1, y2):
-    return int((y2 + y1)/2)
+def get_center(min, max):
+    return int((min + max) * 0.5)
 
 def compute_relative_distance(e_a, e_b):
     a = np.array((e_a.x, e_a.y, e_a.z))

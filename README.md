@@ -1,17 +1,17 @@
 # ZED Social Distance
-## Project to Compute the Distance Between People
+## A Project to Compute the Distance Between People
 
 This project integrates the ZED SDK and Stereolabs ZED camera to compute the real-world distance between people. The ZED produces a depth map that can be used to extract the cartesian coordinates of each pixel in 3D space relative to the camera image. Using the depth map, distances between pixels in the image can be computed that equate to a real-world distance. The acknowledged projects were integrated to provide human detection and tracking. Once a person is detected and tracked, its distance from other people is computed and displayed.
 
 ![Stereolabs ZED](data/helpers/demo.png)
 
-```
+
 This project was forked from: https://github.com/theAIGuysCode/yolov3_deepsort
 and uses technology from:
  - https://github.com/zzh8829/yolov3-tf2
  - https://github.com/nwojke/deep_sort
  - https://arxiv.org/abs/1804.02767
-```
+
 
 ## Required Hardware
 This project requires the use of the Sterolabs ZED Stereovision camera system and the ZED SDK for Python (Py-ZED)
@@ -23,7 +23,7 @@ You will need to install the ZED SDk
 
 
 ## Getting Started 
-These requirements have been lifted from the original repo to be able to run YOLOv3, DeepSORT, and Tensorflow using the COCO dataset. (Some tweaking may be required to get them to work with the ZED SDK and CUDA on your system... use of Conda advised.)
+These requirements have been curated from the original repo to be able to run YOLOv3, DeepSORT, and Tensorflow using the COCO dataset. (Some tweaking may be required to get them to work with the ZED SDK and CUDA on your system... use of Conda advised.)
 
 #### Conda (Recommended)
 

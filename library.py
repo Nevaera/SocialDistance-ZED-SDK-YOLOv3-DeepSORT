@@ -1,6 +1,26 @@
 # Imports
 import numpy as np # For Arrays
 
+class Person:
+    '''
+        Stores location information for tracked person to compute distance to other people
+    '''
+    cx = -1
+    cy = -1
+    x = -1.0
+    y = -1.0
+    z = -1.0
+    dsid = -1
+    d = -1
+    def __init__(self, cx, cy, x, y, z, dsid, d):
+        self.cx = cx
+        self.cy = cy
+        self.x = x
+        self.y = y
+        self.z = z
+        self.dsid = dsid
+        self.d = d
+
 def load_image_into_numpy_array(image):
     '''
         Loads an image from the ZED into a uint numpy array for use with image processing

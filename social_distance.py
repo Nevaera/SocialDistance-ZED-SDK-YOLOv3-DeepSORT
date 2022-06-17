@@ -10,7 +10,7 @@
 #Imports added to support the addition of the ZED
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # Uncomment to suppress TensorFlow's Excessive debug messages
-from os import system, name
+#from os import system, name
 from threading import Lock, Thread
 from time import sleep
 
@@ -19,6 +19,7 @@ import numpy as np
 from absl import app, flags, logging
 from absl.flags import FLAGS
 import cv2
+import math
 import matplotlib.pyplot as plt
 import tensorflow as tf
 from yolov3_tf2.models import (
@@ -62,7 +63,7 @@ height = 720#416
 image_np_global = np.zeros([width, height, 3], dtype=np.uint8) # Global numpy array for ZED left image
 depth_np_global = np.zeros([width, height, 4], dtype=np.float) # Global numpy array for ZED depth map
 exit_signal = False                         # Global variable for exiting
-new_data = False                            # Global variable for indicating if new data is available
+new_data = False                            # Global variable for indicating if new data is available from ZED
 
 def zed_capture_thread_func():
     global image_np_global, depth_np_global, exit_signal, new_data
@@ -154,12 +155,10 @@ def main(_argv):
     #    frame_index = -1 
     
     fps = 0.0
+
     '''    
         # Begin Main Loop
     '''
-    # Set up cv2 named windows
-    #cv2.namedWindow('ZED Camera Feed')
-    #cv2.namedWindow('ZED Depth Cloud')
     while True:
         #_, img = vid.read()
 
@@ -220,16 +219,55 @@ def main(_argv):
                 bbox = det.to_tlbr() 
                 cv2.rectangle(image_np,(int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])),(255,0,0), 2)
 
+            people_locations = [] # List of locations of all tracked people in the frame
+
             for track in tracker.tracks:
                 if not track.is_confirmed() or track.time_since_update > 1:
                     continue 
                 bbox = track.to_tlbr()
                 class_name = track.get_class()
-                color = colors[int(track.track_id) % len(colors)]
-                color = [i * 255 for i in color]
-                cv2.rectangle(image_np, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), color, 2)
-                cv2.rectangle(image_np, (int(bbox[0]), int(bbox[1]-30)), (int(bbox[0])+(len(class_name)+len(str(track.track_id)))*17, int(bbox[1])), color, -1)
-                cv2.putText(image_np, class_name + "-" + str(track.track_id),(int(bbox[0]), int(bbox[1]-10)),0, 0.75, (255,255,255),2)
+                # Get only people
+                if not str(class_name) == "person":
+                    continue
+                else:
+                    xmin = int(bbox[0]) # Y first then X
+                    ymin = int(bbox[1])
+                    xmax = int(bbox[2])
+                    ymax = int(bbox[3])
+                    
+                    if ymin < 0: ymin = 0
+                    if xmin < 0: xmin = 0
+                    if ymax > height: ymax = height-1
+                    if xmax > width: xmax = width-1
+
+                    xc = get_x_center(xmin, xmax) #int((xmax + xmin) * 0.5)
+                    yc = get_y_center(ymin, ymax) #int((ymax + ymin) * 0.5) 
+                    cv2.circle(image_np, (xmin, ymin), 5, (255, 255, 255), thickness=cv2.FILLED)
+                    cv2.circle(image_np, (xmax, ymax), 5, (255, 255, 255), thickness=cv2.FILLED)
+
+                    # Get depth of center-point from cloud
+                    z = depth_np[yc, xc, 2]
+
+                    location = []
+
+                    if not np.isnan(z) and not np.isinf(z):
+                        cv2.circle(image_np, (xc, yc), 5, (0, 255, 0), thickness=cv2.FILLED) # Green Dot
+                        #x_vect.append(depth_np[yc, xc, 0])
+                        #y_vect.append(depth_np[yc, xc, 1])
+                        #z_vect.append(z)
+                        location = [yc, xc, z]
+                    else:
+                        cv2.circle(image_np, (xc, yc), 5, (0, 0, 255), thickness=cv2.FILLED) # Red Dot
+
+                    if location:
+                        distance = math.sqrt(location[1] * location[1] + location[0] * location[0] + location[2] * location[2]) # Compute distance from camera
+
+                    
+                    color = colors[int(track.track_id) % len(colors)]
+                    color = [i * 255 for i in color]
+                    cv2.rectangle(image_np, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), color, 2)
+                    cv2.rectangle(image_np, (int(bbox[0]), int(bbox[1]-30)), (int(bbox[0])+(len(class_name)+len(str(track.track_id)))*17, int(bbox[1])), color, -1)
+                    cv2.putText(image_np, class_name + "-" + str(track.track_id),(int(bbox[0]), int(bbox[1]-10)),0, 0.75, (255,255,255),2)
             
             # print fps on screen 
             fps  = ( fps + (1./(time.time()-t1)) ) / 2

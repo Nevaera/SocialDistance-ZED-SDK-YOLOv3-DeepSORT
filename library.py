@@ -1,0 +1,33 @@
+# Imports
+import numpy as np # For Arrays
+
+def load_image_into_numpy_array(image):
+    '''
+        Loads an image from the ZED into a uint numpy array for use with image processing
+    '''
+    ar = image.get_data()
+    ar = ar[:, :, 0:3]
+    (im_height, im_width, channels) = image.get_data().shape
+    return np.array(ar).reshape((im_height, im_width, 3)).astype(np.uint8)
+
+def load_depth_into_numpy_array(depth):
+    '''
+        Loads an point cloud from the ZED into a float numpy array for use with depth processing
+    '''
+    ar = depth.get_data()
+    ar = ar[:, :, 0:4]
+    (im_height, im_width, channels) = depth.get_data().shape
+    return np.array(ar).reshape((im_height, im_width, channels)).astype(np.float32)
+
+def get_x_center(x1, x2):
+    return int((x2 + x1)/2)
+
+def get_y_center(y1, y2):
+    return int((y2 + y1)/2)
+
+def compute_relative_distance(e_a, e_b):
+    a = np.array((e_a.x, e_a.y, e_a.z))
+    b = np.array((e_b.x, e_b.y, e_b.z))
+    distance = np.linalg.norm(a-b)
+    return distance
+

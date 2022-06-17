@@ -2,6 +2,7 @@
 *.weights
 *.tar
 *.tfrecord
+*.tf.*
 /checkpoints/*
 /serving/*
 /logs/

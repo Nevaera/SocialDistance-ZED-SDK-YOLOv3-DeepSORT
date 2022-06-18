@@ -22,7 +22,8 @@ You will need to install the ZED SDk
  - Py-ZED install docs here: https://www.stereolabs.com/docs/app-development/python/install/
  - You will also need to install the SDK's dependencies (inc. Nvidia CUDA)
  - For converting SVO files please see: https://support.stereolabs.com/hc/en-us/articles/360009986754-How-do-I-convert-SVO-files-to-AVI-or-image-depth-sequences-
-The Running the Object Tracker and Command Line Args Reference sections for examples using the hardware camera and SVO files.
+
+The "Running the Object Tracker" and "Command Line Args" Reference sections for examples using the hardware camera and SVO files.
 
 
 ## Getting Started 
@@ -140,7 +141,7 @@ social_distance.py:
   --num_classes: number of classes in the model
     (default: '80')
     (an integer)
-  --svo: path to as SVO file
+  --svo: path to an SVO file
     (default: 'None')
     (without this, the ZED camera is selected as the default mode)
   --yolo_max_boxes: maximum number of detections at one time

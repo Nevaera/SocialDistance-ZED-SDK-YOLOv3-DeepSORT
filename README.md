@@ -1,11 +1,11 @@
 # ZED Social Distance
-## A Project to Compute if People Adhere to Social Distancing
-
-This project computes the real-world distance between people to determine if they are adhering to social distancing practices. The project uses a Stereolabs ZED camera or an SVO file to compute the real-world distance between people. Human detection and tracking are integrated from the acknoledged projects.
 
 ![Stereolabs ZED](data/helpers/demo.gif)
 The demo was run on a laptop with a Nvidia GTX 1060 Mobile with a compute power of 6.1. The demo SVO file is located in data/svo/demo/svo .
 
+## A Project to Compute if People Adhere to Social Distancing
+
+This project computes the real-world distance between people to determine if they are adhering to social distancing practices. The project uses a Stereolabs ZED camera or an SVO file to compute the real-world distance between people. Human detection and tracking are integrated from the projects acknowledged below.
 
 This project was forked from: https://github.com/theAIGuysCode/yolov3_deepsort
 and uses technology from:

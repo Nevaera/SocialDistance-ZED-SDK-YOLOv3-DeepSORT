@@ -1,7 +1,7 @@
 # ZED Social Distance
 
 ![Stereolabs ZED](data/helpers/demo.gif)
-The demo was run on a laptop with a Nvidia GTX 1060 Mobile with a compute power of 6.1. The demo SVO file is located in data/svo/demo/svo .
+<sub>This demo was run on a laptop with a Nvidia GTX 1060 Mobile with a compute power of 6.1. The demo SVO file is located in data/svo/demo/svo .</sub>
 
 ## A Project to Compute if People Adhere to Social Distancing
 
@@ -23,7 +23,7 @@ You will need to install the ZED SDk
  - You will also need to install the SDK's dependencies (inc. Nvidia CUDA)
  - For converting SVO files please see: https://support.stereolabs.com/hc/en-us/articles/360009986754-How-do-I-convert-SVO-files-to-AVI-or-image-depth-sequences-
 
-The "Running the Object Tracker" and "Command Line Args Reference" sections provide examples of using the ZED or an SVO file.
+The **"Running the Object Tracker"** and **"Command Line Args Reference"** sections provide examples of using the ZED or an SVO file.
 
 
 ## Getting Started 

@@ -23,7 +23,7 @@ You will need to install the ZED SDk
  - You will also need to install the SDK's dependencies (inc. Nvidia CUDA)
  - For converting SVO files please see: https://support.stereolabs.com/hc/en-us/articles/360009986754-How-do-I-convert-SVO-files-to-AVI-or-image-depth-sequences-
 
-The "Running the Object Tracker" and "Command Line Args" Reference sections for examples using the hardware camera and SVO files.
+The "Running the Object Tracker" and "Command Line Args Reference" sections provide examples of using the ZED or an SVO file.
 
 
 ## Getting Started 

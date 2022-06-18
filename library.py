@@ -1,5 +1,6 @@
 # Imports
 import numpy as np # For Arrays
+import pyzed.sl as sl
 
 class Person:
     '''
@@ -49,4 +50,18 @@ def compute_relative_distance(e_a, e_b):
     b = np.array((e_b.x, e_b.y, e_b.z))
     distance = np.linalg.norm(a-b)
     return distance
+
+def print_camera_information(cam):
+    print("\nPrinting ZED/SVO Camera Settings:")
+    print("\tDistorsion factor of the right cam before calibration: {0}.".format(
+        cam.get_camera_information().calibration_parameters_raw.right_cam.disto))
+    print("\tDistorsion factor of the right cam after calibration: {0}.".format(
+        cam.get_camera_information().calibration_parameters.right_cam.disto))
+
+    print("\tConfidence threshold: {0}".format(cam.get_runtime_parameters().confidence_threshold))
+    print("\tDepth min and max range values: {0}, {1}".format(cam.get_init_parameters().depth_minimum_distance,
+                                                            cam.get_init_parameters().depth_maximum_distance))
+    print("\tResolution: {0}, {1}.".format(round(cam.get_camera_information().camera_resolution.width, 2), cam.get_camera_information().camera_resolution.height))
+    print("\tCamera FPS: {0}".format(cam.get_camera_information().camera_fps))
+    print("\tFrame count: {0}.\n".format(cam.get_svo_number_of_frames()))
 

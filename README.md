@@ -1,9 +1,10 @@
 # ZED Social Distance
-## A Project to Compute the Distance Between People
+## A Project to Compute if People Adhere to Social Distancing
 
-This project integrates the ZED SDK and Stereolabs ZED camera to compute the real-world distance between people. The ZED produces a depth map that can be used to extract the cartesian coordinates of each pixel in 3D space relative to the camera image. Using the depth map, distances between pixels in the image can be computed that equate to a real-world distance. The acknowledged projects were integrated to provide human detection and tracking. Once a person is detected and tracked, its distance from other people is computed and displayed.
+This project computes the real-world distance between people to determine if they are adhering to social distancing practices. The project uses a Stereolabs ZED camera or an SVO file to compute the real-world distance between people. Human detection and tracking are integrated from the acknoledged projects.
 
-![Stereolabs ZED](data/helpers/demo.png)
+![Stereolabs ZED](data/helpers/demo.gif)
+The demo was run on a laptop with a Nvidia GTX 1060 Mobile with a compute power of 6.1. The demo SVO file is located in data/svo/demo/svo .
 
 
 This project was forked from: https://github.com/theAIGuysCode/yolov3_deepsort
@@ -13,13 +14,15 @@ and uses technology from:
  - https://arxiv.org/abs/1804.02767
 
 
-## Required Hardware
-This project requires the use of the Sterolabs ZED Stereovision camera system and the ZED SDK for Python (Py-ZED)
+## Requirements
+This project requires either a Sterolabs ZED Stereovision camera or a pre-recorded SVO file.
 ![Stereolabs ZED](data/helpers/zed.jpg)
 You will need to install the ZED SDk
  - Getting started guide here: https://www.stereolabs.com/developers/
  - Py-ZED install docs here: https://www.stereolabs.com/docs/app-development/python/install/
  - You will also need to install the SDK's dependencies (inc. Nvidia CUDA)
+ - For converting SVO files please see: https://support.stereolabs.com/hc/en-us/articles/360009986754-How-do-I-convert-SVO-files-to-AVI-or-image-depth-sequences-
+The Running the Object Tracker and Command Line Args Reference sections for examples using the hardware camera and SVO files.
 
 
 ## Getting Started 
@@ -95,8 +98,11 @@ You can run the object tracker for whichever model you have created, pretrained,
 #yolov3 on Stereolabs ZED using the median depth and the default 2.0m social distance
 python social_distance.py
 
-#yolov3 on Stereolabs ZED with the centerpoint depth and a social distance of 1.5m
-python social_distance.py --depth centerpoint --distance 1.5
+#yolov3 on Stereolabs ZED with the centerpoint depth and a social distance of 2.0m
+python social_distance.py --depth centerpoint --distance 2.0
+
+#yolov3 on the demo SVO File located in data/svo/demo.svo
+python social_distance.py --svo ./data/svo/demo.svo
 
 #yolov3-tiny 
 python social_distance.py --weights ./weights/yolov3-tiny.tf --tiny
@@ -104,7 +110,7 @@ python social_distance.py --weights ./weights/yolov3-tiny.tf --tiny
 #yolov3-custom (add --tiny flag if your custom weights were trained for tiny model)
 python social_distance.py  --weights ./weights/yolov3-custom.tf --num_classes <# CLASSES> --classes ./data/labels/<YOUR CUSTOM .names FILE>
 ```
-Video input/output is not currently supported.
+Video output is not currently supported.
 
 ## Command Line Args Reference
 ```
@@ -127,13 +133,16 @@ social_distance.py:
   --depth: centerpoint or median
     (default: 'false' - median)
   --distance: distance in metres/m for social distancing
-    (default: '2.0')
+    (default: '1.5')
     (a float)
   --weights: path to weights file
     (default: './weights/yolov3.tf')
   --num_classes: number of classes in the model
     (default: '80')
     (an integer)
+  --svo: path to as SVO file
+    (default: 'None')
+    (without this, the ZED camera is selected as the default mode)
   --yolo_max_boxes: maximum number of detections at one time
     (default: '100')
     (an integer)

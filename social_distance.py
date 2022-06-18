@@ -9,7 +9,8 @@
 '''
 #Imports added to support the addition of the ZED
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # Comment out to unsuppress TensorFlow's Excessive debug messages
+import sys
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # Comment out to unsuppress excessive debug messages
 #from os import system, name
 from threading import Lock, Thread
 from time import sleep
@@ -44,6 +45,7 @@ from library import load_image_into_numpy_array
 from library import load_depth_into_numpy_array
 from library import get_center
 from library import compute_relative_distance
+from library import print_camera_information
 from library import Person
 
 flags.DEFINE_string('classes', './data/labels/coco.names', 'path to classes file')
@@ -52,17 +54,17 @@ flags.DEFINE_string('weights', './weights/yolov3.tf',
 flags.DEFINE_boolean('tiny', False, 'yolov3 or yolov3-tiny')
 flags.DEFINE_boolean('depth', False, 'centerpoint or median')
 flags.DEFINE_integer('size', 416, 'resize images to')
-#flags.DEFINE_string('video', './data/video/test.mp4',
-#                    'path to video file or number for webcam)')
+flags.DEFINE_string('svo', "None",
+                    'path to video file or number for webcam)')
 #flags.DEFINE_string('output', None, 'path to output video')
 #flags.DEFINE_string('output_format', 'XVID', 'codec used in VideoWriter when saving video to file')
 flags.DEFINE_integer('num_classes', 80, 'number of classes in the model')
-flags.DEFINE_float('distance', 2.0, 'the social distance [in metres /m]')
+flags.DEFINE_float('distance', 1.5, 'the social distance [in metres /m]')
 
 #Stereolabs ZED-related global variables
 lock = Lock()   
-width = 1280#2560#704 This is the resolution of the ZED Camera
-height = 720#416
+width = 1280 # NOTE: You will need to change this to match the resolution of the ZED Camera
+height = 720 #
 image_np_global = np.zeros([width, height, 3], dtype=np.uint8) # Global numpy array for ZED left image
 depth_np_global = np.zeros([width, height, 4], dtype=np.float) # Global numpy array for ZED depth map
 exit_signal = False                         # Global variable for exiting
@@ -75,7 +77,7 @@ def zed_capture_thread_func():
     zed = sl.Camera()
     # Create a InitParameters object and set configuration parameters
     init_params = sl.InitParameters()
-    init_params.camera_resolution = sl.RESOLUTION.HD720#VGA#HD720
+    init_params.camera_resolution = sl.RESOLUTION.HD720 # Note: You can change this to whatever your hardware supports (remember to change width/height variables)
     init_params.camera_fps = 30
     init_params.depth_mode = sl.DEPTH_MODE.PERFORMANCE
     init_params.coordinate_units = sl.UNIT.METER
@@ -89,6 +91,7 @@ def zed_capture_thread_func():
         print(">>> " + str(err))
         sleep(1)
 
+    print_camera_information(zed)
     image_mat = sl.Mat() # Image Matrix
     depth_mat = sl.Mat() # Depth Matrix
     runtime_parameters = sl.RuntimeParameters()
@@ -110,6 +113,44 @@ def zed_capture_thread_func():
     zed.close()
     print("<<< ZED Shutdown... Done!")
 
+def svo_capture_thread_func():
+    global image_np_global, depth_np_global, exit_signal, new_data
+
+    print(">>> SVO Start...")
+    svo_file = FLAGS.svo
+    print("Opening SVO file: {0}".format(svo_file))
+    input_type = sl.InputType()
+    input_type.set_from_svo_file(svo_file)
+    init_params = sl.InitParameters(input_t=input_type, svo_real_time_mode=False)
+    init_params.coordinate_units = sl.UNIT.METER # Change to metres to be consistent with hardware ZED
+    cam = sl.Camera()
+    status = cam.open(init_params)
+    if status != sl.ERROR_CODE.SUCCESS:
+        print(repr(status))
+        exit_signal = True
+    else:        
+        print_camera_information(cam)  
+        image_mat = sl.Mat() # Image Matrix
+        depth_mat = sl.Mat() # Depth Matrix
+        runtime_parameters = sl.RuntimeParameters()
+        print(">>> SVO Start... Done!")
+
+        while not exit_signal:
+            if cam.grab(runtime_parameters) == sl.ERROR_CODE.SUCCESS:
+                # Get Left Image
+                cam.retrieve_image(image_mat, sl.VIEW.LEFT)            
+                # Get Depth Image
+                cam.retrieve_measure(depth_mat, sl.MEASURE.XYZRGBA)
+                
+                lock.acquire()
+                image_np_global = load_image_into_numpy_array(image_mat)
+                depth_np_global = load_depth_into_numpy_array(depth_mat)
+                new_data = True
+                lock.release()
+            elif cam.grab() == sl.ERROR_CODE.END_OF_SVOFILE_REACHED:
+                cam.set_svo_position(0)
+        cam.close() 
+        print("<<< SVO Stopped!")
 
 def main(_argv):
     global image_np_global, depth_np_global, exit_signal, new_data
@@ -314,9 +355,20 @@ def main(_argv):
     cv2.destroyAllWindows()
 
 if __name__ == '__main__':
+    #Entry point
+    argv = FLAGS(sys.argv)       
     try:
-        capture_thread = Thread(target=zed_capture_thread_func)
-        capture_thread.start()
+        if FLAGS.svo == 'None':
+            print("ZED Mode")
+            # Launch the ZED Hardware
+            capture_thread = Thread(target=zed_capture_thread_func)
+            capture_thread.start()
+        else:
+            print("SVO Mode")
+            # Launch in SVO processing mode
+            svo_thread = Thread(target=svo_capture_thread_func)
+            svo_thread.start()    
         app.run(main)
     except SystemExit:
         pass
+    
